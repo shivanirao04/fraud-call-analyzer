@@ -5,7 +5,7 @@ import uuid
 import os
 
 app = FastAPI()
-model = whisper.load_model("base")
+model = whisper.load_model("tiny")
 
 FRAUD_KEYWORDS = [
     "otp", "one time password", "bank", "account blocked",
@@ -63,3 +63,4 @@ def analyze_call(
     finally:
         if os.path.exists(filename):
             os.remove(filename)
+
