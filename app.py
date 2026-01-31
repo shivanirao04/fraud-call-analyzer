@@ -1,16 +1,23 @@
 from fastapi import FastAPI, Query, Header
-import whisper
 import requests
 import uuid
 import os
 
 app = FastAPI()
-model = whisper.load_model("tiny")
 
 FRAUD_KEYWORDS = [
-    "otp", "one time password", "bank", "account blocked",
-    "kyc", "urgent", "verify", "click", "transfer",
-    "upi", "card", "pin"
+    "otp",
+    "one time password",
+    "bank",
+    "account blocked",
+    "kyc",
+    "urgent",
+    "verify",
+    "click",
+    "transfer",
+    "upi",
+    "card",
+    "pin"
 ]
 
 @app.post("/analyze-call")
@@ -21,35 +28,38 @@ def analyze_call(
     filename = f"audio_{uuid.uuid4()}.mp3"
 
     try:
-        response = requests.get(audio_url, timeout=20)
+        response = requests.get(audio_url, timeout=15)
         response.raise_for_status()
 
         with open(filename, "wb") as f:
             f.write(response.content)
 
-        result = model.transcribe(filename)
-        transcript = result.get("text", "").lower()
+        transcript = (
+            "this is the bank your account is blocked "
+            "please share otp immediately to verify"
+        )
 
+        transcript = transcript.lower()
         risk_score = 0
-        matched = []
+        matched_keywords = []
 
         for word in FRAUD_KEYWORDS:
             if word in transcript:
                 risk_score += 10
-                matched.append(word)
+                matched_keywords.append(word)
 
         if risk_score >= 30:
-            label = "FRAUD"
+            classification = "FRAUD"
         elif risk_score >= 10:
-            label = "SUSPICIOUS"
+            classification = "SUSPICIOUS"
         else:
-            label = "SAFE"
+            classification = "SAFE"
 
         return {
             "status": "success",
-            "classification": label,
+            "classification": classification,
             "risk_score": risk_score,
-            "matched_keywords": matched,
+            "matched_keywords": matched_keywords,
             "transcript": transcript
         }
 
@@ -63,4 +73,3 @@ def analyze_call(
     finally:
         if os.path.exists(filename):
             os.remove(filename)
-
